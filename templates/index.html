@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud de Crédito</title>
+    <!-- Vinculamos el archivo CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+</head>
+<body>
+
+    <div class="contenedor-formulario">
+        <h1>Solicitud de Crédito</h1>
+        <p class="subtitulo">Por favor, completa tus datos para iniciar la evaluación de tu crédito.</p>
+
+        <form action="/guardar" method="POST" enctype="multipart/form-data">
+            
+            <!-- Bloque 1: Datos Personales -->
+            <h2>1. Datos Personales</h2>
+            
+            <div class="campo">
+                <label for="nombre">Nombre(s):</label>
+                <input type="text" id="nombre" name="nombre" placeholder="Ej. Juan Carlos" required>
+            </div>
+
+            <div class="campo">
+                <label for="apellidos">Apellidos:</label>
+                <input type="text" id="apellidos" name="apellidos" placeholder="Ej. Pérez López" required>
+            </div>
+
+            <div class="campo">
+                <label for="fecha_nacimiento">Fecha de Nacimiento:</label>
+                <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required>
+            </div>
+
+            <div class="campo">
+                <label for="curp">CURP o ID Nacional:</label>
+                <input type="text" id="curp" name="curp" placeholder="18 caracteres" required>
+            </div>
+
+            <!-- Bloque 2: Contacto -->
+            <h2>2. Datos de Contacto</h2>
+
+            <div class="campo">
+                <label for="telefono">Teléfono Móvil (10 dígitos):</label>
+                <input type="tel" id="telefono" name="telefono" placeholder="5512345678" pattern="[0-9]{10}" required>
+            </div>
+
+            <div class="campo">
+                <label for="email">Correo Electrónico:</label>
+                <input type="email" id="email" name="email" placeholder="ejemplo@correo.com" required>
+            </div>
+
+            <!-- Bloque 3: Datos Financieros -->
+            <h2>3. Detalles del Crédito</h2>
+
+            <div class="campo">
+                <label for="monto_solicitado">Monto que solicitas ($):</label>
+                <input type="number" id="monto_solicitado" name="monto_solicitado" min="1000" step="500" placeholder="10000" required>
+            </div>
+
+            <div class="campo">
+                <label for="ocupacion">Ocupación / Fuente de Ingresos:</label>
+                <select id="ocupacion" name="ocupacion" required>
+                    <option value="">-- Selecciona una opción --</option>
+                    <option value="empleado">Empleado</option>
+                    <option value="independiente">Trabajador Independiente / Honorarios</option>
+                    <option value="empresario">Empresario / Negocio Propio</option>
+                    <option value="pensionado">Pensionado / Jubilado</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label for="ingreso_mensual">Ingreso Mensual Estimado ($):</label>
+                <input type="number" id="ingreso_mensual" name="ingreso_mensual" min="1" step="100" placeholder="15000" required>
+            </div>
+
+           <h2>4. Documentación Oficial</h2>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">
+                Puedes adjuntar un archivo o tomar una foto directamente desde tu celular.
+            </p>
+
+            <div class="campo">
+                <label for="ine_frente">Identificación Oficial (Frente):</label>
+                <input type="file" id="ine_frente" name="ine_frente" accept="image/*,.pdf" capture="environment" required>
+            </div>
+
+            <div class="campo">
+                <label for="ine_reverso">Identificación Oficial (Reverso):</label>
+                <input type="file" id="ine_reverso" name="ine_reverso" accept="image/*,.pdf" capture="environment" required>
+            </div>
+
+            <div class="campo">
+                <label for="comprobante_domicilio">Comprobante de Domicilio (no mayor a 3 meses):</label>
+                <input type="file" id="comprobante_domicilio" name="comprobante_domicilio" accept="image/*,.pdf" capture="environment" required>
+            </div> 
+
+            <!-- Botón de Envío -->
+            <button type="submit" class="btn-enviar">Enviar Solicitud</button>
+
+        </form>
+    </div>
+
+</body>
+</html>

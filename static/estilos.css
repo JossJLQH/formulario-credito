@@ -1,0 +1,129 @@
+/* 1. Estilos Generales y Tipografía */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f4f7f9;
+    color: #333333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+}
+
+/* 2. Contenedor Principal del Formulario (Tarjeta) */
+.contenedor-formulario {
+    background-color: #ffffff;
+    max-width: 600px;
+    width: 100%;
+    padding: 35px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* 3. Encabezados y Títulos */
+h1 {
+    color: #1a365d;
+    font-size: 26px;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.subtitulo {
+    color: #64748b;
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+h2 {
+    color: #2b6cb0;
+    font-size: 18px;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+}
+
+/* 4. Estilos para los Campos de Entrada (Inputs) */
+.campo {
+    margin-bottom: 18px;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+    color: #4a5568;
+}
+
+input[type="text"],
+input[type="date"],
+input[type="tel"],
+input[type="email"],
+input[type="number"],
+select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background-color: #f8fafc;
+    transition: all 0.3s ease;
+}
+
+/* Cambio de color cuando el usuario hace clic en una casilla */
+input:focus, select:focus {
+    outline: none;
+    border-color: #3182ce;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
+}
+
+/* 5. Botón de Envío */
+.btn-enviar {
+    width: 100%;
+    background-color: #2b6cb0;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-enviar:hover {
+    background-color: #2c5282;
+}
+
+/* Estilo para los botones de subir archivos */
+input[type="file"] {
+    background-color: #ffffff;
+    padding: 8px;
+    border: 1px dashed #a0aec0;
+    cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+    background-color: #edf2f7;
+    color: #2d3748;
+    border: 1px solid #cbd5e1;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: 600;
+    margin-right: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background-color: #e2e8f0;
+}
