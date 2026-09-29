@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solicitud de Crédito</title>
-    <!-- Vinculamos el archivo CSS -->
+    <!-- Vinculamos el archivo CSS desde la carpeta static -->
     <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
 </head>
 <body>
@@ -51,55 +51,187 @@
                 <input type="email" id="email" name="email" placeholder="ejemplo@correo.com" required>
             </div>
 
-            <!-- Bloque 3: Datos Financieros -->
-            <h2>3. Detalles del Crédito</h2>
+            <!-- Bloque 3: Detalles del Crédito y Simulador -->
+        <h2>3. Detalles del Crédito</h2>
 
+        <!-- 
+                ===================================================================
+                NOTA DE DESARROLLO (MODIFICACIÓN DE CAMPO):
+                El campo original permitía ingresar cualquier monto dinámico (min="1000", max="50000").
+                Se deja comentado para futuras referencias o versiones del proyecto.
+                -------------------------------------------------------------------
+                <div class="campo">
+                    <label for="monto_solicitado">Monto que solicitas ($):</label>
+                    <input type="number" id="monto_solicitado" name="monto_solicitado" min="1000" max="50000" step="500" value="10000" required oninput="calcularSimulacion()">
+                </div>
+                ===================================================================
+            -->
+
+            <!-- Campo Fijo: Se establece el monto en $2,000 con atributo readonly -->
             <div class="campo">
-                <label for="monto_solicitado">Monto que solicitas ($):</label>
-                <input type="number" id="monto_solicitado" name="monto_solicitado" min="1000" step="500" placeholder="10000" required>
+                <label for="monto_solicitado">Monto Solicitado ($):</label>
+                <input type="number" id="monto_solicitado" name="monto_solicitado" value="2000" readonly style="background-color: #f1f5f9; cursor: not-allowed; font-weight: bold; color: #1e293b;">
+                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Este crédito cuenta con un monto fijo para clientes nuevos de $2,000.00 MXN.</p>
             </div>
 
+        <!-- Simulador de Préstamo -->
+        <div class="simulador-card">
+            <h3> Simulador de Préstamo</h3>
+            
             <div class="campo">
-                <label for="ocupacion">Ocupación / Fuente de Ingresos:</label>
-                <select id="ocupacion" name="ocupacion" required>
-                    <option value="">-- Selecciona una opción --</option>
-                    <option value="empleado">Empleado</option>
-                    <option value="independiente">Trabajador Independiente / Honorarios</option>
-                    <option value="empresario">Empresario / Negocio Propio</option>
-                    <option value="pensionado">Pensionado / Jubilado</option>
-                </select>
+                <label for="plazo_quincenas">Plazo a pagar: <strong id="val_quincenas">12</strong> quincenas</label>
+                <input type="range" id="plazo_quincenas" name="plazo_quincenas" min="4" max="12" step="1" value="12" oninput="calcularSimulacion()">
+                <div class="rango-etiquetas">
+                    <span>4 quincenas (mín)</span>
+                    <span>12 quincenas (máx)</span>
+                </div>
             </div>
 
-            <div class="campo">
-                <label for="ingreso_mensual">Ingreso Mensual Estimado ($):</label>
-                <input type="number" id="ingreso_mensual" name="ingreso_mensual" min="1" step="100" placeholder="15000" required>
+            <div class="resultado-simulacion">
+                <div class="res-item">
+                    <span>Pago Quincenal Estimado:</span>
+                    <strong id="pago_quincenal">$0.00</strong>
+                </div>
+                <div class="res-item secundario">
+                    <span>Monto Total a Pagar:</span>
+                    <span id="total_pagar">$0.00</span>
+                </div>
             </div>
+        </div>
 
-           <h2>4. Documentación Oficial</h2>
+        <div class="campo" style="margin-top: 15px;">
+            <label for="ocupacion">Ocupación / Fuente de Ingresos:</label>
+            <select id="ocupacion" name="ocupacion" required>
+                <option value="">-- Selecciona una opción --</option>
+                <option value="empleado">Empleado</option>
+                <option value="independiente">Trabajador Independiente / Honorarios</option>
+                <option value="empresario">Empresario / Negocio Propio</option>
+                <option value="pensionado">Pensionado / Jubilado</option>
+            </select>
+        </div>
+
+        <div class="campo">
+        <!--
+            <label for="ingreso_mensual">Ingreso Mensual Estimado ($):</label>
+            <input type="number" id="ingreso_mensual" name="ingreso_mensual" min="1" step="100" placeholder="15000" required>
+        -->
+            <input type="number" id="ingreso_mensual" name="ingreso_mensual" step="0.01" min="0" placeholder="Ej. 15000" required>
+        </div>
+
+            <!-- Bloque 4: Documentación Oficial -->
+            <h2>4. Documentación Oficial</h2>
             <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">
-                Puedes adjuntar un archivo o tomar una foto directamente desde tu celular.
+                Puedes adjuntar un archivo o tomar una foto directamente desde tu celular (Máximo 5 MB por archivo).
             </p>
 
+            <!-- Campo 1: INE Frente -->
             <div class="campo">
                 <label for="ine_frente">Identificación Oficial (Frente):</label>
-                <input type="file" id="ine_frente" name="ine_frente" accept="image/*,.pdf" capture="environment" required>
+                <input type="file" id="ine_frente" name="ine_frente" accept="image/*,.pdf" capture="environment" onchange="procesarVistaPrevia(this, 'preview_ine_frente')" required>
+                <div class="contenedor-vista-previa">
+                    <img id="preview_ine_frente" src="" alt="Vista previa INE Frente" class="img-preview" style="display: none;">
+                </div>
             </div>
 
+            <!-- Campo 2: INE Reverso -->
             <div class="campo">
                 <label for="ine_reverso">Identificación Oficial (Reverso):</label>
-                <input type="file" id="ine_reverso" name="ine_reverso" accept="image/*,.pdf" capture="environment" required>
+                <input type="file" id="ine_reverso" name="ine_reverso" accept="image/*,.pdf" capture="environment" onchange="procesarVistaPrevia(this, 'preview_ine_reverso')" required>
+                <div class="contenedor-vista-previa">
+                    <img id="preview_ine_reverso" src="" alt="Vista previa INE Reverso" class="img-preview" style="display: none;">
+                </div>
             </div>
 
+            <!-- Campo 3: Comprobante Domicilio -->
             <div class="campo">
                 <label for="comprobante_domicilio">Comprobante de Domicilio (no mayor a 3 meses):</label>
-                <input type="file" id="comprobante_domicilio" name="comprobante_domicilio" accept="image/*,.pdf" capture="environment" required>
-            </div> 
+                <input type="file" id="comprobante_domicilio" name="comprobante_domicilio" accept="image/*,.pdf" capture="environment" onchange="procesarVistaPrevia(this, 'preview_comprobante')" required>
+                <div class="contenedor-vista-previa">
+                    <img id="preview_comprobante" src="" alt="Vista previa Comprobante" class="img-preview" style="display: none;">
+                </div>
+            </div>
 
             <!-- Botón de Envío -->
             <button type="submit" class="btn-enviar">Enviar Solicitud</button>
 
         </form>
     </div>
+
+    <!-- Script en JavaScript para la vista previa y validación de tamaño -->
+    <script>
+        function procesarVistaPrevia(input, idImagenPreview) {
+            const archivo = input.files[0];
+            const imgElemento = document.getElementById(idImagenPreview);
+            const limiteBytes = 5 * 1024 * 1024; // Limitamos a 5 MB
+
+            if (archivo) {
+                // 1. Validar tamaño del archivo
+                if (archivo.size > limiteBytes) {
+                    alert('El archivo "' + archivo.name + '" supera el peso máximo permitido de 5 MB. Por favor elige una imagen o archivo más ligero.');
+                    input.value = ''; // Limpia la selección
+                    imgElemento.style.display = 'none';
+                    imgElemento.src = '';
+                    return;
+                }
+
+                // 2. Si es una imagen, mostrar vista previa
+                if (archivo.type.startsWith('image/')) {
+                    const lector = new FileReader();
+                    lector.onload = function(e) {
+                        imgElemento.src = e.target.result;
+                        imgElemento.style.display = 'block';
+                    }
+                    lector.readAsDataURL(archivo);
+                } else {
+                    // Si es PDF u otro formato permitido, ocultamos la imagen
+                    imgElemento.style.display = 'none';
+                    imgElemento.src = '';
+                }
+            } else {
+                imgElemento.style.display = 'none';
+                imgElemento.src = '';
+            }
+        }
+    
+    
+       // Función para calcular la cuota quincenal con la regla de negocio exacta
+function calcularSimulacion() {
+    const inputMonto = document.getElementById('monto_solicitado');
+    const inputPlazo = document.getElementById('plazo_quincenas');
+    
+    const txtQuincenas = document.getElementById('val_quincenas');
+    const txtPagoQuincenal = document.getElementById('pago_quincenal');
+    const txtTotalPagar = document.getElementById('total_pagar');
+
+    const monto = parseFloat(inputMonto.value) || 0;
+    const quincenas = parseInt(inputPlazo.value) || 12;
+
+    txtQuincenas.textContent = quincenas;
+
+    if (monto > 0) {
+        // 1. Aplicamos tu fórmula: Monto Total = Monto * 1.30 (30% adicional)
+        const totalAPagar = monto * 1.30;
+        
+        // 2. Calculamos la cuota quincenal exacta
+        const cuotaExacta = totalAPagar / quincenas;
+
+        // 3. Redondeamos SIEMPRE hacia arriba al entero más cercano (ej. 216.3 -> 217)
+        const cuotaRedondeada = Math.ceil(cuotaExacta);
+
+        // Formato visual en Moneda Mexicana ($217.00)
+        txtPagoQuincenal.textContent = '$' + cuotaRedondeada.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        txtTotalPagar.textContent = '$' + totalAPagar.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+        txtPagoQuincenal.textContent = '$0.00';
+        txtTotalPagar.textContent = '$0.00';
+    }
+}
+
+// Ejecutar el cálculo automáticamente al cargar la página
+window.onload = function() {
+    calcularSimulacion();
+};
+    </script>
 
 </body>
 </html>
