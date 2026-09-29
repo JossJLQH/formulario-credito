@@ -1,4 +1,11 @@
+# Ignorar base de datos local
 creditos.db
-uploads/
+
+# Ignorar archivos adjuntos subidos localmente
+uploads/*
+!uploads/.gitkeep
+
+# Entornos virtuales
+venv/
+env/
 __pycache__/
-.DS_Store

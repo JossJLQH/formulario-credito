@@ -1,50 +1,44 @@
 import os
 import uuid
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_from_directory, redirect
 from werkzeug.utils import secure_filename
 import sqlite3
+from datetime import datetime
+import pytz
 
 app = Flask(__name__)
 
-# Configuración de la carpeta donde se guardarán los documentos subidos
+# Configuración de la carpeta de uploads
 CARPETA_UPLOADS = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['UPLOAD_FOLDER'] = CARPETA_UPLOADS
 
-# Crear la carpeta 'uploads' si aún no existe en el proyecto
 if not os.path.exists(CARPETA_UPLOADS):
     os.makedirs(CARPETA_UPLOADS)
 
-# Extensiones de archivo permitidas por seguridad
 EXTENSIONES_PERMITIDAS = {'png', 'jpg', 'jpeg', 'pdf'}
 
 def archivo_permitido(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in EXTENSIONES_PERMITIDAS
 
-
 def guardar_archivo(archivo_form):
-    """Función auxilar para validar, nombrar de forma única y guardar el archivo"""
     if archivo_form and archivo_form.filename != '' and archivo_permitido(archivo_form.filename):
         nombre_original = secure_filename(archivo_form.filename)
-        extension = nombre_original.rsplit('.', 1)[1].lower()
-        
-        # Generar un nombre único (ejemplo: ine_frente_a1b2c3d4.jpg)
         nombre_unico = f"{uuid.uuid4().hex[:8]}_{nombre_original}"
         ruta_completa = os.path.join(app.config['UPLOAD_FOLDER'], nombre_unico)
-        
-        # Guardar el archivo físicamente en la carpeta 'uploads'
         archivo_form.save(ruta_completa)
         return nombre_unico
     return None
 
+# ==========================================
+# RUTAS DEL CLIENTE (FORMULARIO)
+# ==========================================
 
 @app.route('/')
 def formulario():
     return render_template('index.html')
 
-
 @app.route('/guardar', methods=['POST'])
 def guardar_solicitud():
-    # 1. Recibir datos de texto del formulario
     nombre = request.form['nombre']
     apellidos = request.form['apellidos']
     fecha_nacimiento = request.form['fecha_nacimiento']
@@ -55,17 +49,18 @@ def guardar_solicitud():
     ocupacion = request.form['ocupacion']
     ingreso_mensual = request.form['ingreso_mensual']
 
-    # 2. Recibir los archivos de imagen / PDF
     file_ine_frente = request.files.get('ine_frente')
     file_ine_reverso = request.files.get('ine_reverso')
     file_comprobante = request.files.get('comprobante_domicilio')
 
-    # 3. Guardar las fotos en la carpeta 'uploads' y obtener los nombres únicos
     nombre_ine_frente = guardar_archivo(file_ine_frente)
     nombre_ine_reverso = guardar_archivo(file_ine_reverso)
     nombre_comprobante = guardar_archivo(file_comprobante)
 
-    # 4. Guardar todo en la Base de Datos SQLite
+    # Obtenemos fecha y hora exacta del Centro de México
+    zona_mexico = pytz.timezone('America/Mexico_City')
+    fecha_hora_mexico = datetime.now(zona_mexico).strftime('%Y-%m-%d %H:%M:%S')
+
     try:
         conexion = sqlite3.connect('creditos.db')
         cursor = conexion.cursor()
@@ -73,12 +68,12 @@ def guardar_solicitud():
         cursor.execute('''
             INSERT INTO solicitudes_credito 
             (nombre, apellidos, fecha_nacimiento, curp, telefono, email, monto_solicitado, ocupacion, ingreso_mensual,
-             foto_ine_frente, foto_ine_reverso, foto_comprobante_domicilio)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             foto_ine_frente, foto_ine_reverso, foto_comprobante_domicilio, fecha_registro)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             nombre, apellidos, fecha_nacimiento, curp, telefono, email, 
             monto_solicitado, ocupacion, ingreso_mensual,
-            nombre_ine_frente, nombre_ine_reverso, nombre_comprobante
+            nombre_ine_frente, nombre_ine_reverso, nombre_comprobante, fecha_hora_mexico
         ))
 
         conexion.commit()
@@ -87,17 +82,9 @@ def guardar_solicitud():
 
         return f'''
             <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center; max-width: 600px; margin: auto;">
-                <h1 style="color: #2b6cb0;">¡Solicitud Completa Guardada! 🎉</h1>
-                <p>Se ha registrado la solicitud con los documentos adjuntos en la base de datos.</p>
-                <p style="background: #edf2f7; padding: 12px; border-radius: 6px;"><strong>ID Solicitud:</strong> #{id_registro}</p>
-                <p><strong>Cliente:</strong> {nombre} {apellidos}</p>
-                <p><strong>Documentos subidos:</strong></p>
-                <ul style="text-align: left; display: inline-block;">
-                    <li>INE Frente: {nombre_ine_frente}</li>
-                    <li>INE Reverso: {nombre_ine_reverso}</li>
-                    <li>Comprobante: {nombre_comprobante}</li>
-                </ul>
-                <br><br>
+                <h1 style="color: #2b6cb0;">¡Solicitud Registrada con Éxito! 🎉</h1>
+                <p>Se ha guardado tu solicitud con el <strong>ID No. {id_registro}</strong>.</p>
+                <br>
                 <a href="/" style="background: #2b6cb0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Registrar otra solicitud</a>
             </div>
         '''
@@ -107,12 +94,109 @@ def guardar_solicitud():
             <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
                 <h1 style="color: #e53e3e;"> Error al Registrar</h1>
                 <p>La CURP <strong>{curp}</strong> ya se encuentra registrada en el sistema.</p>
-                <br><br>
+                <br>
                 <a href="/" style="background: #e53e3e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Volver a intentar</a>
             </div>
         '''
 
+# ==========================================
+# RUTAS DE ADMINISTRACIÓN
+# ==========================================
+
+# 1. Ruta para ver el panel administrativo con la tabla y estatus
+@app.route('/admin')
+def panel_admin():
+    conexion = sqlite3.connect('creditos.db')
+    cursor = conexion.cursor()
+    cursor.execute('''
+        SELECT id, nombre, apellidos, curp, telefono, email, monto_solicitado, 
+               foto_ine_frente, foto_ine_reverso, foto_comprobante_domicilio, 
+               fecha_registro, COALESCE(estatus, 'Pendiente') AS estatus
+        FROM solicitudes_credito
+        ORDER BY id DESC
+    ''')
+    solicitudes = cursor.fetchall()
+    conexion.close()
+    
+    return render_template('admin.html', solicitudes=solicitudes)
+
+# 2. Ruta para cambiar el estatus de la solicitud (Aprobada / Rechazada / Pendiente)
+@app.route('/cambiar_estatus/<int:id_solicitud>', methods=['POST'])
+def cambiar_estatus(id_solicitud):
+    nuevo_estatus = request.form.get('nuevo_estatus')
+    
+    conexion = sqlite3.connect('creditos.db')
+    cursor = conexion.cursor()
+    cursor.execute('''
+        UPDATE solicitudes_credito 
+        SET estatus = ? 
+        WHERE id = ?
+    ''', (nuevo_estatus, id_solicitud))
+    
+    conexion.commit()
+    conexion.close()
+    
+    # Redirigimos de vuelta al panel administrativo para ver el cambio reflejado
+    return redirect('/admin')
+
+# 3. Ruta para abrir y ver los archivos guardados en la carpeta 'uploads'
+@app.route('/uploads/<path:filename>')
+def ver_documento(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+# 4. Ruta para eliminar una solicitud específica por su ID
+@app.route('/eliminar_solicitud/<int:id_solicitud>', methods=['POST'])
+def eliminar_solicitud(id_solicitud):
+    conexion = sqlite3.connect('creditos.db')
+    cursor = conexion.cursor()
+    
+    # Primero obtenemos los nombres de los archivos guardados para borralos físicamente
+    cursor.execute('''
+        SELECT foto_ine_frente, foto_ine_reverso, foto_comprobante_domicilio 
+        FROM solicitudes_credito WHERE id = ?
+    ''', (id_solicitud,))
+    archivos = cursor.fetchone()
+    
+    if archivos:
+        for nombre_archivo in archivos:
+            if nombre_archivo:
+                ruta_archivo = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo)
+                if os.path.exists(ruta_archivo):
+                    os.remove(ruta_archivo) # Elimina el archivo físico de la carpeta uploads/
+    
+    # Eliminamos el registro de la tabla
+    cursor.execute('DELETE FROM solicitudes_credito WHERE id = ?', (id_solicitud,))
+    conexion.commit()
+    conexion.close()
+    
+    return redirect('/admin')
+
+
+# 5. Ruta para REINICIAR por completo la BD (Borra todo y resetea el contador de ID a 1)
+@app.route('/resetear_base_datos', methods=['POST'])
+def resetear_base_datos():
+    conexion = sqlite3.connect('creditos.db')
+    cursor = conexion.cursor()
+    
+    # 1. Eliminar todos los registros de la tabla
+    cursor.execute('DELETE FROM solicitudes_credito;')
+    
+    # 2. Reiniciar el contador de autoincremento a 0
+    cursor.execute("DELETE FROM sqlite_sequence WHERE name='solicitudes_credito';")
+    
+    conexion.commit()
+    conexion.close()
+    
+    # 3. Limpiar la carpeta física de uploads/
+    for archivo in os.listdir(app.config['UPLOAD_FOLDER']):
+        ruta_completa = os.path.join(app.config['UPLOAD_FOLDER'], archivo)
+        if os.path.isfile(ruta_completa):
+            os.remove(ruta_completa)
+            
+    return redirect('/admin')
+
 
 if __name__ == '__main__':
-    print("Servidor listo en http://127.0.0.1:5000")
+    print("Servidor corriendo en http://127.0.0.1:5000")
+    print("Panel de administración en http://127.0.0.1:5000/admin")
     app.run(debug=True)
