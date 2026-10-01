@@ -29,6 +29,37 @@ def guardar_archivo(archivo_form):
         return nombre_unico
     return None
 
+# Función para inicializar la base de datos con los nuevos campos
+def init_db():
+    conexion = sqlite3.connect('creditos.db')
+    cursor = conexion.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS solicitudes_credito (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            primer_nombre TEXT NOT NULL,
+            segundo_nombre TEXT,
+            apellido_paterno TEXT NOT NULL,
+            apellido_materno TEXT,
+            fecha_nacimiento TEXT NOT NULL,
+            curp TEXT UNIQUE NOT NULL,
+            telefono TEXT NOT NULL,
+            email TEXT NOT NULL,
+            monto_solicitado REAL NOT NULL,
+            ocupacion TEXT NOT NULL,
+            ingreso_mensual REAL NOT NULL,
+            foto_ine_frente TEXT,
+            foto_ine_reverso TEXT,
+            foto_comprobante_domicilio TEXT,
+            fecha_registro TEXT NOT NULL,
+            estatus TEXT DEFAULT 'Pendiente'
+        )
+    ''')
+    conexion.commit()
+    conexion.close()
+
+# Ejecutamos la inicialización al arrancar
+init_db()
+
 # ==========================================
 # RUTAS DEL CLIENTE (FORMULARIO)
 # ==========================================
@@ -39,10 +70,13 @@ def formulario():
 
 @app.route('/guardar', methods=['POST'])
 def guardar_solicitud():
-    nombre = request.form['nombre']
-    apellidos = request.form['apellidos']
+    primer_nombre = request.form['primer_nombre']
+    segundo_nombre = request.form.get('segundo_nombre', '')
+    apellido_paterno = request.form['apellido_paterno']
+    apellido_materno = request.form.get('apellido_materno', '')
+    
     fecha_nacimiento = request.form['fecha_nacimiento']
-    curp = request.form['curp']
+    curp = request.form['curp'].upper().strip()
     telefono = request.form['telefono']
     email = request.form['email']
     monto_solicitado = request.form['monto_solicitado']
@@ -67,11 +101,13 @@ def guardar_solicitud():
 
         cursor.execute('''
             INSERT INTO solicitudes_credito 
-            (nombre, apellidos, fecha_nacimiento, curp, telefono, email, monto_solicitado, ocupacion, ingreso_mensual,
+            (primer_nombre, segundo_nombre, apellido_paterno, apellido_materno, 
+             fecha_nacimiento, curp, telefono, email, monto_solicitado, ocupacion, ingreso_mensual,
              foto_ine_frente, foto_ine_reverso, foto_comprobante_domicilio, fecha_registro)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            nombre, apellidos, fecha_nacimiento, curp, telefono, email, 
+            primer_nombre, segundo_nombre, apellido_paterno, apellido_materno,
+            fecha_nacimiento, curp, telefono, email, 
             monto_solicitado, ocupacion, ingreso_mensual,
             nombre_ine_frente, nombre_ine_reverso, nombre_comprobante, fecha_hora_mexico
         ))
@@ -109,7 +145,8 @@ def panel_admin():
     conexion = sqlite3.connect('creditos.db')
     cursor = conexion.cursor()
     cursor.execute('''
-        SELECT id, nombre, apellidos, curp, telefono, email, monto_solicitado, 
+        SELECT id, primer_nombre, segundo_nombre, apellido_paterno, apellido_materno, 
+               curp, telefono, email, monto_solicitado, 
                foto_ine_frente, foto_ine_reverso, foto_comprobante_domicilio, 
                fecha_registro, COALESCE(estatus, 'Pendiente') AS estatus
         FROM solicitudes_credito
@@ -136,7 +173,6 @@ def cambiar_estatus(id_solicitud):
     conexion.commit()
     conexion.close()
     
-    # Redirigimos de vuelta al panel administrativo para ver el cambio reflejado
     return redirect('/admin')
 
 # 3. Ruta para abrir y ver los archivos guardados en la carpeta 'uploads'
@@ -150,7 +186,6 @@ def eliminar_solicitud(id_solicitud):
     conexion = sqlite3.connect('creditos.db')
     cursor = conexion.cursor()
     
-    # Primero obtenemos los nombres de los archivos guardados para borralos físicamente
     cursor.execute('''
         SELECT foto_ine_frente, foto_ine_reverso, foto_comprobante_domicilio 
         FROM solicitudes_credito WHERE id = ?
@@ -162,32 +197,26 @@ def eliminar_solicitud(id_solicitud):
             if nombre_archivo:
                 ruta_archivo = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo)
                 if os.path.exists(ruta_archivo):
-                    os.remove(ruta_archivo) # Elimina el archivo físico de la carpeta uploads/
+                    os.remove(ruta_archivo)
     
-    # Eliminamos el registro de la tabla
     cursor.execute('DELETE FROM solicitudes_credito WHERE id = ?', (id_solicitud,))
     conexion.commit()
     conexion.close()
     
     return redirect('/admin')
 
-
-# 5. Ruta para REINICIAR por completo la BD (Borra todo y resetea el contador de ID a 1)
+# 5. Ruta para REINICIAR por completo la BD
 @app.route('/resetear_base_datos', methods=['POST'])
 def resetear_base_datos():
     conexion = sqlite3.connect('creditos.db')
     cursor = conexion.cursor()
     
-    # 1. Eliminar todos los registros de la tabla
     cursor.execute('DELETE FROM solicitudes_credito;')
-    
-    # 2. Reiniciar el contador de autoincremento a 0
     cursor.execute("DELETE FROM sqlite_sequence WHERE name='solicitudes_credito';")
     
     conexion.commit()
     conexion.close()
     
-    # 3. Limpiar la carpeta física de uploads/
     for archivo in os.listdir(app.config['UPLOAD_FOLDER']):
         ruta_completa = os.path.join(app.config['UPLOAD_FOLDER'], archivo)
         if os.path.isfile(ruta_completa):
