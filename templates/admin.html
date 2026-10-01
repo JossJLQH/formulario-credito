@@ -128,7 +128,7 @@
     <div class="header">
         <h1> Panel de Control - Solicitudes</h1>
         <div class="acciones-header">
-            <form action="/resetear_base_datos" method="POST" onsubmit="return confirm('⚠️ ¿Estás seguro de que deseas ELIMINAR TODAS las solicitudes y reiniciar el contador de ID a 1? Esta acción no se puede deshacer.');">
+            <form action="/resetear_base_datos" method="POST" onsubmit="return confirm('⚠️ ¿Estás seguro de que deseas ELIMINAR TODAS las solicitudes y reiniciar el contador de ID a 1?');">
                 <button type="submit" class="btn-reset">🧹 Reiniciar Todo (Pruebas)</button>
             </form>
             <a href="/" class="btn-nuevo">+ Nueva Solicitud</a>
@@ -154,31 +154,34 @@
                 {% for sol in solicitudes %}
                 <tr>
                     <td><strong>#{{ sol[0] }}</strong></td>
-                    <td>{{ sol[1] }} {{ sol[2] }}</td>
-                    <td><code>{{ sol[3] }}</code></td>
                     <td>
-                        {{ sol[4] }}<br>
-                        <small style="color: #64748b;">{{ sol[5] }}</small>
+                        <!-- Concatenación limpia de nombres y apellidos -->
+                        {{ sol[1] }} {% if sol[2] %}{{ sol[2] }}{% endif %} {{ sol[3] }} {% if sol[4] %}{{ sol[4] }}{% endif %}
                     </td>
-                    <td><span class="badge-monto">${{ "{:,.2f}".format(sol[6]) }}</span></td>
+                    <td><code>{{ sol[5] }}</code></td>
                     <td>
-                        {% if sol[7] %}<a href="/uploads/{{ sol[7] }}" target="_blank" class="btn-doc">🪪 INE F.</a>{% endif %}
-                        {% if sol[8] %}<a href="/uploads/{{ sol[8] }}" target="_blank" class="btn-doc">🪪 INE R.</a>{% endif %}
-                        {% if sol[9] %}<a href="/uploads/{{ sol[9] }}" target="_blank" class="btn-doc">🏠 Comp.</a>{% endif %}
+                        {{ sol[6] }}<br>
+                        <small style="color: #64748b;">{{ sol[7] }}</small>
+                    </td>
+                    <td><span class="badge-monto">${{ "{:,.2f}".format(sol[8]) }}</span></td>
+                    <td>
+                        {% if sol[9] %}<a href="/uploads/{{ sol[9] }}" target="_blank" class="btn-doc">🪪 INE F.</a>{% endif %}
+                        {% if sol[10] %}<a href="/uploads/{{ sol[10] }}" target="_blank" class="btn-doc">🪪 INE R.</a>{% endif %}
+                        {% if sol[11] %}<a href="/uploads/{{ sol[11] }}" target="_blank" class="btn-doc">🏠 Comp.</a>{% endif %}
                     </td>
                     <td>
-                        <span class="badge-estatus estatus-{{ sol[11] }}">{{ sol[11] }}</span>
+                        <span class="badge-estatus estatus-{{ sol[13] }}">{{ sol[13] }}</span>
                         <form action="/cambiar_estatus/{{ sol[0] }}" method="POST" style="margin: 0;">
                             <select name="nuevo_estatus" class="select-estatus" onchange="this.form.submit()">
-                                <option value="Pendiente" {% if sol[11] == 'Pendiente' %}selected{% endif %}>Pendiente</option>
-                                <option value="Aprobado" {% if sol[11] == 'Aprobado' %}selected{% endif %}>Aprobado</option>
-                                <option value="Rechazado" {% if sol[11] == 'Rechazado' %}selected{% endif %}>Rechazado</option>
+                                <option value="Pendiente" {% if sol[13] == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                                <option value="Aprobado" {% if sol[13] == 'Aprobado' %}selected{% endif %}>Aprobado</option>
+                                <option value="Rechazado" {% if sol[13] == 'Rechazado' %}selected{% endif %}>Rechazado</option>
                             </select>
                         </form>
                     </td>
-                    <td style="color: #64748b; font-size: 12px;">{{ sol[10] }}</td>
+                    <td style="color: #64748b; font-size: 12px;">{{ sol[12] }}</td>
                     <td>
-                        <form action="/eliminar_solicitud/{{ sol[0] }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar la solicitud #{{ sol[0] }}? Se borrarán sus fotos.');">
+                        <form action="/eliminar_solicitud/{{ sol[0] }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar la solicitud #{{ sol[0] }}?');">
                             <button type="submit" class="btn-eliminar">🗑️ Eliminar</button>
                         </form>
                     </td>
