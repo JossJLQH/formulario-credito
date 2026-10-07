@@ -1,22 +1,19 @@
 import os
 import uuid
+from flask import Flask, render_template, request, send_from_directory, redirect, url_for
+from werkzeug.utils import secure_filename
 import sqlite3
+from datetime import datetime
 import pytz
 import random
-import smtplib
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, send_from_directory, redirect, url_for, session, flash
-from werkzeug.utils import secure_filename
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import smtplib
 
 app = Flask(__name__)
-# Clave secreta requerida para manejar sesiones y mensajes flash en Flask
-app.secret_key = 'clave_secreta_super_segura_para_desarrollo'
 
-# ==========================================
-# CONFIGURACIONES
-# ==========================================
+# Configuración de la carpeta de uploads
 CARPETA_UPLOADS = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['UPLOAD_FOLDER'] = CARPETA_UPLOADS
 
@@ -25,14 +22,6 @@ if not os.path.exists(CARPETA_UPLOADS):
 
 EXTENSIONES_PERMITIDAS = {'png', 'jpg', 'jpeg', 'pdf'}
 
-MAIL_SERVER = 'smtp.gmail.com'
-MAIL_PORT = 587
-MAIL_USERNAME = 'tu_correo@gmail.com'  
-MAIL_PASSWORD = 'tu_contraseña_de_aplicacion'
-
-# ==========================================
-# FUNCIONES AUXILIARES
-# ==========================================
 def archivo_permitido(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in EXTENSIONES_PERMITIDAS
 
@@ -45,41 +34,10 @@ def guardar_archivo(archivo_form):
         return nombre_unico
     return None
 
-def generar_y_enviar_otp(destinatario):
-    codigo = str(random.randint(100000, 999999))
-    expiracion = (datetime.now() + timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')
-
-    print(f'\n==================================================')
-    print(f'*** [DEV MODE] CÓDIGO OTP PARA {destinatario}: {codigo} ***')
-    print(f'==================================================\n')
-
-    msg = MIMEMultipart()
-    msg['From'] = MAIL_USERNAME
-    msg['To'] = destinatario
-    msg['Subject'] = 'Código de Verificación - Formulario de Crédito'
-
-    cuerpo = f"Hola,\nTu código de verificación es: {codigo}\nEste código expirará en 10 minutos."
-    msg.attach(MIMEText(cuerpo, 'plain'))
-
-    try:
-        server = smtplib.SMTP(MAIL_SERVER, MAIL_PORT)
-        server.starttls()
-        server.login(MAIL_USERNAME, MAIL_PASSWORD)
-        server.sendmail(MAIL_USERNAME, destinatario, msg.as_string())
-        server.quit()
-    except Exception as e:
-        print(f'Nota: No se pudo enviar por SMTP real (modo desarrollo activo): {e}')
-    
-    return codigo, expiracion
-
-# ==========================================
-# BASE DE DATOS
-# ==========================================
+# Función para inicializar la base de datos con los nuevos campos
 def init_db():
-    conexion = sqlite3.connect('creditos.db', timeout=10)
+    conexion = sqlite3.connect('creditos.db')
     cursor = conexion.cursor()
-    
-    # Tabla principal de solicitudes
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS solicitudes_credito (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,109 +59,27 @@ def init_db():
             estatus TEXT DEFAULT 'Pendiente'
         )
     ''')
-    
-    # Tabla para verificaciones OTP de correo
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS verificaciones_email (
-            email TEXT PRIMARY KEY,
-            codigo TEXT NOT NULL,
-            expiracion TEXT NOT NULL,
-            verificado INTEGER DEFAULT 0
-        )
-    ''')
     conexion.commit()
     conexion.close()
 
+# Ejecutamos la inicialización al arrancar
 init_db()
 
 # ==========================================
-# FLUJO PASO A PASO: CORREO OTP Y FORMULARIO
+# RUTAS DEL CLIENTE (FORMULARIO)
 # ==========================================
 
-# 1. Página Inicial: Pide el correo
 @app.route('/')
-def inicio():
-    if session.get('email_verificado'):
-        return redirect(url_for('mostrar_formulario'))
-    return render_template('solicitar_email.html')
+def formulario():
+    return render_template('index.html')
 
-# 2. Enviar OTP al correo ingresado
-@app.route('/enviar-otp', methods=['POST'])
-def enviar_otp():
-    email = request.form['email']
-    session['email_temp'] = email
-
-    codigo, expiracion = generar_y_enviar_otp(email)
-
-    conexion = sqlite3.connect('creditos.db', timeout=10)
-    cursor = conexion.cursor()
-    cursor.execute('''
-        INSERT INTO verificaciones_email (email, codigo, expiracion, verificado)
-        VALUES (?, ?, ?, 0)
-        ON CONFLICT(email) DO UPDATE SET codigo=excluded.codigo, expiracion=excluded.expiracion, verificado=0
-    ''', (email, codigo, expiracion))
-
-    conexion.commit()
-    conexion.close()
-
-    flash('Te hemos enviado un código de 6 dígitos a tu correo.', 'info')
-    return redirect(url_for('verificar_otp_vista'))
-
-# 3. Vista y validación del OTP
-@app.route('/verificar-otp', methods=['GET', 'POST'])
-def verificar_otp_vista():
-    email_actual = session.get('email_temp')
-
-    if not email_actual:
-        flash('Por favor, ingresa tu correo primero.', 'error')
-        return redirect(url_for('inicio'))
-
-    if request.method == 'POST':
-        codigo_ingresado = request.form['codigo']
-
-        conexion = sqlite3.connect('creditos.db', timeout=10)
-        cursor = conexion.cursor()
-        cursor.execute('SELECT codigo, expiracion FROM verificaciones_email WHERE email = ?', (email_actual,))
-        registro = cursor.fetchone()
-
-        if registro:
-            codigo_bd, expiracion_bd = registro
-            ahora = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-            if codigo_ingresado == codigo_bd and ahora <= expiracion_bd:
-                cursor.execute('UPDATE verificaciones_email SET verificado = 1 WHERE email = ?', (email_actual,))
-                conexion.commit()
-                conexion.close()
-
-                session['email_verificado'] = True
-                session['email_confirmado'] = email_actual
-
-                return redirect(url_for('mostrar_formulario'))
-            else:
-                flash('Código incorrecto o expirado.', 'error')
-
-        conexion.close()
-
-    return render_template('verificar_otp.html', email=email_actual)
-
-# 4. Formulario Principal de Crédito (Protegido)
-@app.route('/formulario')
-def mostrar_formulario():
-    if not session.get('email_verificado'):
-        flash('Debes verificar tu correo antes de llenar la solicitud.', 'error')
-        return redirect(url_for('inicio'))
-
-    email_usuario = session.get('email_confirmado', '')
-    return render_template('index.html', email_prellenado=email_usuario)
-
-# 5. Guardar la solicitud completa
 @app.route('/guardar', methods=['POST'])
 def guardar_solicitud():
     primer_nombre = request.form['primer_nombre']
     segundo_nombre = request.form.get('segundo_nombre', '')
     apellido_paterno = request.form['apellido_paterno']
     apellido_materno = request.form.get('apellido_materno', '')
-
+    
     fecha_nacimiento = request.form['fecha_nacimiento']
     curp = request.form['curp'].upper().strip()
     telefono = request.form['telefono']
@@ -220,11 +96,12 @@ def guardar_solicitud():
     nombre_ine_reverso = guardar_archivo(file_ine_reverso)
     nombre_comprobante = guardar_archivo(file_comprobante)
 
+    # Obtenemos fecha y hora exacta del Centro de México
     zona_mexico = pytz.timezone('America/Mexico_City')
     fecha_hora_mexico = datetime.now(zona_mexico).strftime('%Y-%m-%d %H:%M:%S')
 
     try:
-        conexion = sqlite3.connect('creditos.db', timeout=10)
+        conexion = sqlite3.connect('creditos.db')
         cursor = conexion.cursor()
 
         cursor.execute('''
@@ -244,9 +121,6 @@ def guardar_solicitud():
         id_registro = cursor.lastrowid
         conexion.close()
 
-        session.pop('email_verificado', None)
-        session.pop('email_confirmado', None)
-
         return f'''
             <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center; max-width: 600px; margin: auto;">
                 <h1 style="color: #2b6cb0;">¡Solicitud Registrada con Éxito! 🎉</h1>
@@ -259,10 +133,10 @@ def guardar_solicitud():
     except sqlite3.IntegrityError:
         return f'''
             <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
-                <h1 style="color: #e53e3e;">Error al Registrar</h1>
+                <h1 style="color: #e53e3e;"> Error al Registrar</h1>
                 <p>La CURP <strong>{curp}</strong> ya se encuentra registrada en el sistema.</p>
                 <br>
-                <a href="/formulario" style="background: #e53e3e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Volver a intentar</a>
+                <a href="/" style="background: #e53e3e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Volver a intentar</a>
             </div>
         '''
 
@@ -270,9 +144,10 @@ def guardar_solicitud():
 # RUTAS DE ADMINISTRACIÓN
 # ==========================================
 
+# 1. Ruta para ver el panel administrativo con la tabla y estatus
 @app.route('/admin')
 def panel_admin():
-    conexion = sqlite3.connect('creditos.db', timeout=10)
+    conexion = sqlite3.connect('creditos.db')
     cursor = conexion.cursor()
     cursor.execute('''
         SELECT id, primer_nombre, segundo_nombre, apellido_paterno, apellido_materno, 
@@ -287,11 +162,12 @@ def panel_admin():
     
     return render_template('admin.html', solicitudes=solicitudes)
 
+# 2. Ruta para cambiar el estatus de la solicitud (Aprobada / Rechazada / Pendiente)
 @app.route('/cambiar_estatus/<int:id_solicitud>', methods=['POST'])
 def cambiar_estatus(id_solicitud):
     nuevo_estatus = request.form.get('nuevo_estatus')
     
-    conexion = sqlite3.connect('creditos.db', timeout=10)
+    conexion = sqlite3.connect('creditos.db')
     cursor = conexion.cursor()
     cursor.execute('''
         UPDATE solicitudes_credito 
@@ -304,13 +180,15 @@ def cambiar_estatus(id_solicitud):
     
     return redirect('/admin')
 
+# 3. Ruta para abrir y ver los archivos guardados en la carpeta 'uploads'
 @app.route('/uploads/<path:filename>')
 def ver_documento(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+# 4. Ruta para eliminar una solicitud específica por su ID
 @app.route('/eliminar_solicitud/<int:id_solicitud>', methods=['POST'])
 def eliminar_solicitud(id_solicitud):
-    conexion = sqlite3.connect('creditos.db', timeout=10)
+    conexion = sqlite3.connect('creditos.db')
     cursor = conexion.cursor()
     
     cursor.execute('''
@@ -332,9 +210,10 @@ def eliminar_solicitud(id_solicitud):
     
     return redirect('/admin')
 
+# 5. Ruta para REINICIAR por completo la BD
 @app.route('/resetear_base_datos', methods=['POST'])
 def resetear_base_datos():
-    conexion = sqlite3.connect('creditos.db', timeout=10)
+    conexion = sqlite3.connect('creditos.db')
     cursor = conexion.cursor()
     
     cursor.execute('DELETE FROM solicitudes_credito;')
@@ -351,8 +230,6 @@ def resetear_base_datos():
     return redirect('/admin')
 
 if __name__ == '__main__':
-    print("\n--------------------------------------------------")
-    print("Servidor corriendo en: http://127.0.0.1:5000")
-    print("Panel de administración en: http://127.0.0.1:5000/admin")
-    print("--------------------------------------------------\n")
+    print("Servidor corriendo en http://127.0.0.1:5000")
+    print("Panel de administración en http://127.0.0.1:5000/admin")
     app.run(debug=True)

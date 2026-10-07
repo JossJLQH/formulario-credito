@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación de Correo - Solicitud de Crédito</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            padding: 40px 30px;
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .card h2 {
+            color: #2b6cb0;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .card p {
+            color: #4a5568;
+            font-size: 15px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .email-highlight {
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        .alert-info {
+            background-color: #ebf8ff;
+            color: #2b6cb0;
+            border: 1px solid #bee3f8;
+        }
+
+        .alert-success {
+            background-color: #f0fff4;
+            color: #276749;
+            border: 1px solid #c6f6d5;
+        }
+
+        .alert-error {
+            background-color: #fff5f5;
+            color: #c53030;
+            border: 1px solid #fed7d7;
+        }
+
+        .otp-input-group {
+            margin-bottom: 25px;
+        }
+
+        .otp-input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #718096;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .otp-field {
+            width: 100%;
+            padding: 14px;
+            font-size: 24px;
+            letter-spacing: 12px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s ease;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .otp-field:focus {
+            border-color: #2b6cb0;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background-color: #2b6cb0;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-submit:hover {
+            background-color: #2c5282;
+        }
+
+        .footer-links {
+            margin-top: 20px;
+            font-size: 13px;
+        }
+
+        .footer-links a {
+            color: #4299e1;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Verifica tu Correo</h2>
+        <p>Hemos enviado un código de seguridad de 6 dígitos a:<br>
+           <span class="email-highlight">{{ email }}</span>
+        </p>
+
+        <!-- Bloque de Notificaciones/Alertas de Flask -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Formulario para ingresar el código OTP -->
+        <form action="/verificar-otp" method="POST">
+            <div class="otp-input-group">
+                <label for="codigo">Código de 6 dígitos</label>
+                <input 
+                    type="text" 
+                    id="codigo" 
+                    name="codigo" 
+                    class="otp-field" 
+                    maxlength="6" 
+                    pattern="[0-9]{6}" 
+                    placeholder="000000" 
+                    required 
+                    autocomplete="one-time-code"
+                    autofocus
+                >
+            </div>
+
+            <button type="submit" class="btn-submit">Verificar Código</button>
+        </form>
+
+        <div class="footer-links">
+            <p>¿No recibiste el código? 
+                <form action="/enviar-otp" method="POST" style="display:inline;">
+                    <input type="hidden" name="email" value="{{ email }}">
+                    <button type="submit" style="background:none; border:none; color:#4299e1; cursor:pointer; font-size:13px; text-decoration:underline;">Reenviar</button>
+                </form>
+            </p>
+            <br>
+            <a href="/">← Corregir correo electrónico</a>
+        </div>
+    </div>
+
+</body>
+</html>
