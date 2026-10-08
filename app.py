@@ -204,6 +204,12 @@ def verificar_otp():
 
     return redirect(url_for('mostrar_formulario'))
 
+# Permite al usuario cerrar la sesión de verificación y probar con otro correo
+@app.route('/reiniciar')
+def reiniciar():
+    session.clear()
+    return redirect(url_for('inicio'))
+
 
 # 4. Mostrar el formulario de solicitud protegido
 @app.route('/formulario')
