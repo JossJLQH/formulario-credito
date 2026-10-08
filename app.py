@@ -93,6 +93,38 @@ def inicio():
         return redirect(url_for('mostrar_formulario'))
     return render_template('solicitar_email.html')
 
+# 2. Procesa el correo, genera el OTP y redirige a la pantalla de verificación
+@app.route('/enviar-otp', methods=['POST'])
+def enviar_otp():
+    email = request.form.get('email', '').strip().lower()
+    
+    if not email:
+        flash('Por favor ingresa un correo electrónico válido.', 'error')
+        return redirect(url_for('inicio'))
+    
+    # Genera el código y calcula expiración
+    codigo, expiracion = generar_y_enviar_otp(email)
+    
+    # Guarda o actualiza el código OTP en la base de datos
+    conexion = sqlite3.connect('creditos.db', timeout=10)
+    cursor = conexion.cursor()
+    cursor.execute('''
+        INSERT INTO verificaciones_email (email, codigo, expiracion, verificado)
+        VALUES (?, ?, ?, 0)
+        ON CONFLICT(email) DO UPDATE SET
+            codigo = excluded.codigo,
+            expiracion = excluded.expiracion,
+            verificado = 0
+    ''', (email, codigo, expiracion))
+    
+    conexion.commit()
+    conexion.close()
+    
+    # Guarda el correo en la sesión temporal para el siguiente paso
+    session['email_pendiente'] = email
+    
+    return render_template('verificar_otp.html', email=email)
+
 # 3. Vista y validación del OTP
 # ==========================================
 # CONFIGURACIÓN DE CORREO (RESEND API)
