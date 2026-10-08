@@ -206,14 +206,14 @@ def verificar_otp():
 
 
 # 4. Mostrar el formulario de solicitud protegido
-@app.route('/formulario')
-def mostrar_formulario():
-    email = session.get('email_verificado')
-    if not email:
-        flash('Debes verificar tu correo antes de acceder al formulario.', 'error')
-        return redirect(url_for('inicio'))
+#@app.route('/formulario')
+#def mostrar_formulario():
+#    email = session.get('email_verificado')
+#    if not email:
+#        flash('Debes verificar tu correo antes de acceder al formulario.', 'error')
+#        return redirect(url_for('inicio'))
     
-    return render_template('index.html', email=email)
+#    return render_template('index.html', email=email)
 
 # 4. Formulario Principal de Crédito (Protegido)
 @app.route('/formulario')
