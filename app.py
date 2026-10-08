@@ -23,11 +23,6 @@ if not os.path.exists(CARPETA_UPLOADS):
 
 EXTENSIONES_PERMITIDAS = {'png', 'jpg', 'jpeg', 'pdf'}
 
-MAIL_SERVER = 'smtp.gmail.com'
-MAIL_PORT = 587
-MAIL_USERNAME = 'tu_correo@gmail.com'  
-MAIL_PASSWORD = 'tu_contraseña_de_aplicacion'
-
 # ==========================================
 # FUNCIONES AUXILIARES
 # ==========================================
