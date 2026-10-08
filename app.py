@@ -282,14 +282,20 @@ def guardar_solicitud():
         session.pop('email_verificado', None)
         session.pop('email_confirmado', None)
 
-        return f'''
-            <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center; max-width: 600px; margin: auto;">
-                <h1 style="color: #2b6cb0;">¡Solicitud Registrada con Éxito! 🎉</h1>
-                <p>Se ha guardado tu solicitud con el <strong>ID No. {id_registro}</strong>.</p>
-                <br>
-                <a href="/" style="background: #2b6cb0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Registrar otra solicitud</a>
-            </div>
-        '''
+        # Al final de la función guardar (después de conexion.commit()):
+        session.pop('email_verificado', None)
+    
+        flash('¡Tu solicitud ha sido enviada con éxito!', 'exito')
+        return redirect(url_for('inicio')) # O a tu pantalla de éxito
+
+        #return f'''
+        #    <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center; max-width: 600px; margin: auto;">
+        #        <h1 style="color: #2b6cb0;">¡Solicitud Registrada con Éxito! 🎉</h1>
+        #        <p>Se ha guardado tu solicitud con el <strong>ID No. {id_registro}</strong>.</p>
+        #        <br>
+        #        <a href="/" style="background: #2b6cb0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Registrar otra solicitud</a>
+        #    </div>
+        #'''
 
     except sqlite3.IntegrityError:
         return f'''
