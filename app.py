@@ -161,6 +161,60 @@ def generar_y_enviar_otp(destinatario):
     
     return codigo, expiracion
 
+# 3. Validar el código OTP ingresado
+@app.route('/verificar-otp', methods=['POST'])
+def verificar_otp():
+    email = session.get('email_pendiente')
+    codigo_ingresado = request.form.get('codigo', '').strip()
+
+    if not email:
+        flash('La sesión ha expirado. Por favor ingresa tu correo de nuevo.', 'error')
+        return redirect(url_for('inicio'))
+
+    conexion = sqlite3.connect('creditos.db', timeout=10)
+    cursor = conexion.cursor()
+    cursor.execute('SELECT codigo, expiracion, verificado FROM verificaciones_email WHERE email = ?', (email,))
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        flash('No se encontró una solicitud activa para este correo.', 'error')
+        return redirect(url_for('inicio'))
+
+    codigo_guardado, expiracion_str, verificado = resultado
+    expiracion = datetime.strptime(expiracion_str, '%Y-%m-%d %H:%M:%S')
+
+    # Verificar si el código ya expiró
+    if datetime.now() > expiracion:
+        flash('El código ha expirado. Por favor solicita uno nuevo.', 'error')
+        return redirect(url_for('inicio'))
+
+    # Verificar si el código ingresado coincide
+    if codigo_ingresado != codigo_guardado:
+        flash('Código incorrecto. Inténtalo de nuevo.', 'error')
+        return render_template('verificar_otp.html', email=email)
+
+    # Marcar el correo como verificado en la base de datos
+    cursor.execute('UPDATE verificaciones_email SET verificado = 1 WHERE email = ?', (email,))
+    conexion.commit()
+    conexion.close()
+
+    # Guardar en la sesión que el correo está verificado
+    session['email_verificado'] = email
+    session.pop('email_pendiente', None)
+
+    return redirect(url_for('mostrar_formulario'))
+
+
+# 4. Mostrar el formulario de solicitud protegido
+@app.route('/formulario')
+def mostrar_formulario():
+    email = session.get('email_verificado')
+    if not email:
+        flash('Debes verificar tu correo antes de acceder al formulario.', 'error')
+        return redirect(url_for('inicio'))
+    
+    return render_template('index.html', email=email)
+
 # 4. Formulario Principal de Crédito (Protegido)
 @app.route('/formulario')
 def mostrar_formulario():
